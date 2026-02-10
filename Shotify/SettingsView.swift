@@ -345,7 +345,7 @@ struct AboutView: View {
             
             Spacer()
             
-            Text("© 2025 Finley Groombridge")
+            Text("© 2025 Fin Woods.")
                 .font(.caption2)
                 .foregroundColor(.secondary)
                 .opacity(0.6)

@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  Shotify
 //
-//  Created by Finley Groombridge on 26/11/2025.
+
 //
 
 import SwiftUI

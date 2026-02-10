@@ -2,7 +2,7 @@
 
 Shotify is a lightweight macOS menu bar app that automatically copies new screenshots to your clipboard while keeping the files in your chosen screenshots folder.
 
-![Shotify menu bar](/Users/finley/Documents/Github/Shotify/shotifymenubar.png)
+![Shotify menu bar](/Shotify/Images/shotify1.png)
 
 ## Features
 - Auto-copy newly saved screenshots to the clipboard
@@ -24,7 +24,7 @@ Shotify is a lightweight macOS menu bar app that automatically copies new screen
 The normal way to install Shotify is to download the latest `.app` from GitHub Releases.
 
 ## Build & Run
-1. Open `/Users/finley/Documents/Github/Shotify/Shotify.xcodeproj` in Xcode.
+1. Open `Shotify.xcodeproj` in Xcode.
 2. Select the `Shotify` scheme.
 3. Build and Run.
 
@@ -39,6 +39,8 @@ The normal way to install Shotify is to download the latest `.app` from GitHub R
 - Launch at login
 - Toggle macOS screenshot thumbnail
 - Choose or detect the screenshot folder
+
+![Shotify menu bar](/Shotify/Images/shotify2.png)
 
 ## Notes
 - If no custom folder is set, Shotify tries to read the macOS screenshot location and falls back to Desktop.
