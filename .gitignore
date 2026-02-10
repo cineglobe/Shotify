@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Xcode user data
+*.xcuserstate
+**/xcuserdata/
+
+# Build products
+DerivedData/
+build/
+*.dSYM/
+
+# Swift Package Manager (if added later)
+.build/
+.swiftpm/
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# Logs
+*.log
