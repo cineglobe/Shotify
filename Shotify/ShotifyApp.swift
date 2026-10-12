@@ -50,6 +50,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Hide dock icon for menu bar only app
         NSApp.setActivationPolicy(.accessory)
+
+        SketchController.shared.updateHotKey()
+
+        #if DEBUG
+        // Open the sketch editor on an existing image: -SketchTestImage /path/to/image.png
+        if let path = UserDefaults.standard.string(forKey: "SketchTestImage") {
+            SketchController.shared.openEditorForTesting(imageURL: URL(fileURLWithPath: path))
+        }
+        #endif
     }
     
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -61,6 +70,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 struct MenuBarView: View {
     @ObservedObject var screenshotMonitor: ScreenshotMonitor
     @AppStorage("isEnabled") private var isEnabled = true
+    @AppStorage("sketchHotKeyEnabled") private var sketchHotKeyEnabled = true
+    @AppStorage("sketchHotKeyKey") private var sketchHotKeyKey = "9"
     @Environment(\.openSettings) private var openSettings
     
     var body: some View {
@@ -76,6 +87,20 @@ struct MenuBarView: View {
             Label(isEnabled ? "Disable Auto-Copy" : "Enable Auto-Copy", 
                   systemImage: isEnabled ? "pause.circle" : "play.circle")
         }
+        
+        Button {
+            // Let the menu finish closing before the crosshair appears
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                SketchController.shared.startCapture()
+            }
+        } label: {
+            Label("Capture & Sketch", systemImage: "pencil.and.scribble")
+        }
+        .keyboardShortcut(
+            sketchHotKeyEnabled
+                ? KeyboardShortcut(KeyEquivalent(Character(sketchHotKeyKey)), modifiers: [.command, .shift])
+                : nil
+        )
         
         Divider()
         

@@ -47,7 +47,7 @@ struct SettingsView: View {
             }
             .tag(2)
         }
-        .frame(width: 450, height: 350)
+        .frame(width: 450, height: 460)
         .padding()
     }
 }
@@ -59,6 +59,8 @@ struct GeneralSettingsView: View {
     @Binding var launchAtLogin: Bool
     @Binding var playSoundOnCopy: Bool
     @ObservedObject var screenshotMonitor: ScreenshotMonitor
+    @AppStorage("sketchHotKeyEnabled") private var sketchHotKeyEnabled = true
+    @AppStorage("sketchHotKeyKey") private var sketchHotKeyKey = "9"
     
     @State private var showThumbnail = true
     
@@ -84,6 +86,29 @@ struct GeneralSettingsView: View {
                     }
             } header: {
                 Text("Behavior")
+            }
+            
+            Section {
+                Toggle("Enable Capture & Sketch shortcut", isOn: $sketchHotKeyEnabled)
+                    .onChange(of: sketchHotKeyEnabled) { _, _ in
+                        SketchController.shared.updateHotKey()
+                    }
+                
+                Picker("Shortcut", selection: $sketchHotKeyKey) {
+                    ForEach(SketchController.availableKeys, id: \.key) { option in
+                        Text("⌘⇧\(option.key)").tag(option.key)
+                    }
+                }
+                .disabled(!sketchHotKeyEnabled)
+                .onChange(of: sketchHotKeyKey) { _, _ in
+                    SketchController.shared.updateHotKey()
+                }
+                
+                Text("Select an area like ⌘⇧4, then the screenshot pops up so you can draw arrows, boxes and text on it. Press Return to copy it.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } header: {
+                Text("Capture & Sketch")
             }
             
             Section {
@@ -324,7 +349,7 @@ struct AboutView: View {
                 .font(.largeTitle)
                 .fontWeight(.bold)
             
-            Text("Version 1.0")
+            Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0")")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
