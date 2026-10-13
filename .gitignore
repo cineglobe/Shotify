@@ -20,3 +20,6 @@ playground.xcworkspace
 
 # Logs
 *.log
+
+# LLVM coverage output
+*.profraw

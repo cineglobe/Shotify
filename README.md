@@ -11,6 +11,7 @@ Shotify is a lightweight macOS menu bar app that automatically copies new screen
 - Optional notifications and sound feedback on copy
 - Launch at login toggle
 - Toggle macOS screenshot thumbnails (to avoid the 5-second delay)
+- **Capture & Sketch (⌘⇧9):** select an area as with ⌘⇧4, then draw on the capture (pen, highlighter, arrow, line, box, oval, text) before it's copied. The shortcut can be changed or turned off in Settings.
 
 ## How It Works
 - Monitors your screenshot folder using Spotlight metadata (`kMDItemIsScreenCapture`) for efficient detection.

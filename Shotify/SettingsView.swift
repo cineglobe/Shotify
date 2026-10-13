@@ -268,7 +268,7 @@ struct FolderSettingsView: View {
         .formStyle(.grouped)
         .onAppear {
             if screenshotFolderPath.isEmpty {
-                useDefaultLocation()
+                detectCurrentLocation()
             }
         }
     }
@@ -296,33 +296,8 @@ struct FolderSettingsView: View {
     }
     
     private func detectCurrentLocation() {
-        // Try to detect the current screenshot location from macOS defaults
-        let task = Process()
-        task.launchPath = "/usr/bin/defaults"
-        task.arguments = ["read", "com.apple.screencapture", "location"]
-        
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = pipe
-        
-        do {
-            try task.run()
-            task.waitUntilExit()
-            
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
-               !output.isEmpty,
-               task.terminationStatus == 0 {
-                // Expand tilde path if present
-                let expandedPath = expandTildePath(output)
-                screenshotFolderPath = expandedPath
-                screenshotMonitor.updateMonitoringPath(expandedPath)
-            } else {
-                useDefaultLocation()
-            }
-        } catch {
-            useDefaultLocation()
-        }
+        screenshotMonitor.followSystemLocation()
+        screenshotFolderPath = screenshotMonitor.monitoringPath
     }
     
     private func expandTildePath(_ path: String) -> String {

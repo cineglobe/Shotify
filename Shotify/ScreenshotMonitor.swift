@@ -23,6 +23,13 @@ final class ScreenshotMonitor: ObservableObject {
     // Spotlight metadata query for instant screenshot detection
     private var metadataQuery: NSMetadataQuery?
     private var processedFiles: Set<String> = []
+    /// While following the system location, checks whether it changed (⌘⇧5 → Options → Save to).
+    private var locationCheck: Timer?
+
+    /// True unless the user picked a folder themselves; then Shotify follows macOS's screenshot location.
+    private var followsSystemLocation: Bool {
+        UserDefaults.standard.object(forKey: "screenshotFolderFollowsSystem") as? Bool ?? true
+    }
     
     // Cached date formatter (creating formatters is expensive)
     private lazy var timeFormatter: DateFormatter = {
@@ -46,14 +53,50 @@ final class ScreenshotMonitor: ObservableObject {
     // MARK: - Setup
     
     private func setupDefaultPath() {
-        // Check for saved path first
-        if let savedPath = UserDefaults.standard.string(forKey: "screenshotFolderPath"),
+        if !followsSystemLocation,
+           let savedPath = UserDefaults.standard.string(forKey: "screenshotFolderPath"),
            !savedPath.isEmpty {
             monitoringPath = expandTildePath(savedPath)
         } else {
-            // Try to detect current macOS screenshot location
             detectScreenshotLocation()
         }
+    }
+
+    /// The folder macOS saves screenshots to (Desktop unless changed in ⌘⇧5 → Options).
+    static func systemScreenshotLocation() -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        if let value = CFPreferencesCopyAppValue("location" as CFString, "com.apple.screencapture" as CFString) as? String,
+           !value.isEmpty {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed == "~" { return home.path }
+            if trimmed.hasPrefix("~/") { return home.appendingPathComponent(String(trimmed.dropFirst(2))).path }
+            return trimmed
+        }
+        return home.appendingPathComponent("Desktop").path
+    }
+
+    /// Follow the system location again (used by Settings → Detect Current Location).
+    func followSystemLocation() {
+        UserDefaults.standard.set(true, forKey: "screenshotFolderFollowsSystem")
+        applyPath(Self.systemScreenshotLocation())
+        startLocationCheck()
+    }
+
+    private func startLocationCheck() {
+        locationCheck?.invalidate()
+        locationCheck = nil
+        guard followsSystemLocation, isMonitoring else { return }
+        let timer = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.followsSystemLocation else { return }
+                CFPreferencesAppSynchronize("com.apple.screencapture" as CFString)
+                let current = Self.systemScreenshotLocation()
+                if current != self.monitoringPath { self.applyPath(current) }
+            }
+        }
+        timer.tolerance = 15
+        RunLoop.main.add(timer, forMode: .common)
+        locationCheck = timer
     }
     
     /// Expands ~ to the user's home directory
@@ -68,36 +111,8 @@ final class ScreenshotMonitor: ObservableObject {
     }
     
     private func detectScreenshotLocation() {
-        let task = Process()
-        task.launchPath = "/usr/bin/defaults"
-        task.arguments = ["read", "com.apple.screencapture", "location"]
-        
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = pipe
-        
-        do {
-            try task.run()
-            task.waitUntilExit()
-            
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
-               !output.isEmpty,
-               task.terminationStatus == 0 {
-                // Expand tilde path if present
-                monitoringPath = expandTildePath(output)
-            } else {
-                // Default to Desktop
-                monitoringPath = FileManager.default.homeDirectoryForCurrentUser
-                    .appendingPathComponent("Desktop").path
-            }
-        } catch {
-            monitoringPath = FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent("Desktop").path
-        }
-        
+        monitoringPath = Self.systemScreenshotLocation()
         UserDefaults.standard.set(monitoringPath, forKey: "screenshotFolderPath")
-        print("📸 Shotify: Detected screenshot folder: \(monitoringPath)")
     }
     
     // MARK: - Monitoring Control
@@ -121,6 +136,7 @@ final class ScreenshotMonitor: ObservableObject {
         startMetadataQuery()
         
         isMonitoring = true
+        startLocationCheck()
         #if DEBUG
         print("📸 Shotify: Started monitoring \(monitoringPath)")
         #endif
@@ -134,6 +150,8 @@ final class ScreenshotMonitor: ObservableObject {
             query.stop()
         }
         metadataQuery = nil
+        locationCheck?.invalidate()
+        locationCheck = nil
         
         isMonitoring = false
         #if DEBUG
@@ -141,7 +159,13 @@ final class ScreenshotMonitor: ObservableObject {
         #endif
     }
     
+    /// A folder the user chose: stop following the system location.
     func updateMonitoringPath(_ path: String) {
+        UserDefaults.standard.set(false, forKey: "screenshotFolderFollowsSystem")
+        applyPath(path)
+    }
+
+    private func applyPath(_ path: String) {
         let wasMonitoring = isMonitoring
         
         if wasMonitoring {
